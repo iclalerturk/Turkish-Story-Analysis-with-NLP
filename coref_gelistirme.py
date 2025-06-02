@@ -10,7 +10,7 @@ model = AutoModelForSequenceClassification.from_pretrained(model_name)
 classifier = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 
 # Metin ve karakter listesi
-with open("NLP-Hikayeler\hikayeler\ceviz.txt", "r", encoding="utf-8") as file:
+with open("NLP-Hikayeler\hikayeler\habilkabil.txt", "r", encoding="utf-8") as file:
     text = file.read()
 sentences = [s.strip() for s in text.split(".") if s.strip()]
 

@@ -24,7 +24,7 @@ insansi_eylemler = {
     "çalış", "konuş", "al", "dile", "kız", "kır", "kırıl", "hastalan"
 }
 
-path = "NLP-Hikayeler\hikayeler\hansefendiN.txt"
+path = "NLP-Hikayeler\hikayeler\Hansel GretelV.txt"
 with open(path, "r", encoding="utf-8") as file:
     sentence = file.read()
 
