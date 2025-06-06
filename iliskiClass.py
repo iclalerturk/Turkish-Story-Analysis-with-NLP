@@ -162,7 +162,7 @@ class KarakterIliski:
             
 
     def duygu_egrisi_cizme(self) -> QPixmap:
-    # 📈 Duygu eğrisi çizimi
+        # 📈 Duygu eğrisi çizimi
         duygu_puanlari = []
         etiket2skor = {"positive": 1, "neutral": 0, "negative": -1}
         for iliski in self.tum_iliskiler:
@@ -170,16 +170,26 @@ class KarakterIliski:
             skor = etiket2skor.get(duygu, 0)
             duygu_puanlari.append(skor)
 
+        # Hareketli ortalama ile yumuşatma
         duygu_akisi_smooth = self.moving_average(duygu_puanlari, window_size=5)
 
-        n = len(self.tum_iliskiler)
-        bolum1_bitis = n // 3
-        bolum2_bitis = 2 * n // 3      
+        # Duyguların değişim şiddetini hesapla
+        degisim_skorlari = [abs(duygu_akisi_smooth[i] - duygu_akisi_smooth[i - 1]) for i in range(1, len(duygu_akisi_smooth))]
+        if len(degisim_skorlari) < 2:
+            raise ValueError("Yeterli duygu verisi yok.")
 
+        # En büyük iki kırılma noktasını bul
+        skorlar_kopya = degisim_skorlari.copy()
+        ilk_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
+        skorlar_kopya[ilk_kirilma - 1] = -1
+        ikinci_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
+        bolum_noktalar = sorted([ilk_kirilma, ikinci_kirilma])
+
+        # Grafik çizimi
         fig = plt.figure(figsize=(10, 4))
         plt.plot(duygu_akisi_smooth, color='purple', linewidth=2)
-        plt.axvline(x=bolum1_bitis, color='gray', linestyle='--')
-        plt.axvline(x=bolum2_bitis, color='gray', linestyle='--')
+        plt.axvline(x=bolum_noktalar[0], color='gray', linestyle='--', label="Bölüm Geçişi")
+        plt.axvline(x=bolum_noktalar[1], color='gray', linestyle='--')
         plt.title("Duygu Eğrisi (Hareketli Ortalama ile)")
         plt.xlabel("Zaman (Cümle/İlişki Sırası)")
         plt.ylabel("Duygu Skoru")
@@ -241,24 +251,48 @@ class KarakterIliski:
         return pixmap
 
     def bolume_gore_grafik(self, baslik=None) -> QPixmap:
-        n = len(self.tum_iliskiler)
-        bolum1_bitis = n // 3
-        bolum2_bitis = 2 * n // 3
-        bolumler = [
-            self.tum_iliskiler[:bolum1_bitis],
-            self.tum_iliskiler[bolum1_bitis:bolum2_bitis],
-            self.tum_iliskiler[bolum2_bitis:]
-        ]
+        from sklearn.metrics import pairwise_distances
+        import numpy as np
 
-        if baslik == "Giriş Bölümü":
-            bolum = bolumler[0]
-        elif baslik == "Gelişme Bölümü":
-            bolum = bolumler[1]
-        elif baslik == "Sonuç Bölümü":
-            bolum = bolumler[2]
-        else:
-            raise ValueError("Geçersiz bölüm başlığı. 'Giriş Bölümü', 'Gelişme Bölümü' veya 'Sonuç Bölümü' olmalıdır.")
+        # Duyguları vektörleştirme (sadece sıralı olarak işlenebilir hale getirme)
+        duygu_sirasi = [iliski["duygu"] for iliski in self.tum_iliskiler]
+        duygu_sayisi = len(duygu_sirasi)
         
+        if duygu_sayisi < 3:
+            raise ValueError("Yeterli ilişki verisi yok (en az 3 ilişki gerekli)")
+
+        # Duyguları bir indeks listesine çevir
+        benzersiz_duygular = list(set(duygu_sirasi))
+        duygu2idx = {duygu: i for i, duygu in enumerate(benzersiz_duygular)}
+        vektorler = [duygu2idx[d] for d in duygu_sirasi]
+
+        # Değişim skorlarını hesapla (birbirini takip eden duygular arasındaki fark)
+        degisim_skorlari = [abs(vektorler[i] - vektorler[i - 1]) for i in range(1, len(vektorler))]
+
+        # En büyük iki kırılma noktası bulunur
+        skorlar_kopya = degisim_skorlari.copy()
+        ilk_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
+        skorlar_kopya[ilk_kirilma - 1] = -1  # ilkini eledik
+        ikinci_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
+
+        # Sıraya göre ayarlama (garanti)
+        bolum_noktalar = sorted([ilk_kirilma, ikinci_kirilma])
+
+        bolum1 = self.tum_iliskiler[:bolum_noktalar[0]]
+        bolum2 = self.tum_iliskiler[bolum_noktalar[0]:bolum_noktalar[1]]
+        bolum3 = self.tum_iliskiler[bolum_noktalar[1]:]
+
+        bolumler = {
+            "Giriş Bölümü": bolum1,
+            "Gelişme Bölümü": bolum2,
+            "Sonuç Bölümü": bolum3
+        }
+
+        if baslik not in bolumler:
+            raise ValueError("Geçersiz bölüm başlığı. 'Giriş Bölümü', 'Gelişme Bölümü' veya 'Sonuç Bölümü' olmalıdır.")
+
+        bolum = bolumler[baslik]
+
         iliskiler_duygular = defaultdict(list)
         for iliski in bolum:
             c1, c2 = sorted([iliski["kim"], iliski["kime"]])
@@ -288,7 +322,6 @@ class KarakterIliski:
         plt.axis('off')
         plt.tight_layout()
 
-        # Grafiği belleğe çiz
         canvas = FigureCanvasAgg(fig)
         buf = io.BytesIO()
         canvas.print_png(buf)
@@ -299,6 +332,7 @@ class KarakterIliski:
         pixmap = QPixmap.fromImage(image)
 
         return pixmap
+
 
 
 # if __name__ == "__main__":
