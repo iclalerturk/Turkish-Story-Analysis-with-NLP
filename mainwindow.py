@@ -409,6 +409,31 @@ class Ui_MainWindow(object):
         "}")
                 self.genelButton.setObjectName("genelButton")
                 self.horizontalLayout_2.addWidget(self.genelButton)
+
+                self.geriButton = QtWidgets.QPushButton(self.page_2)
+                self.geriButton.setMinimumSize(QtCore.QSize(0, 30))
+                self.geriButton.setStyleSheet("QPushButton {\n"
+        "    /* Butonun normal durumu */\n"
+        "    background-color: #2980b9; /* Mavi */\n"
+        "    color: white; /* Beyaz yazı */\n"
+        "    border: none;\n"
+        "    padding: 10px 20px;\n"
+        "    border-radius: 5px;\n"
+        "}\n"
+        "\n"
+        "QPushButton:hover {\n"
+        "    /* Butonun üzerine gelindiğinde (hover) durumu */\n"
+        "    background-color: #3498db; /* Daha koyu mavi */\n"
+        "    color: #f0f0f0; /* Hafif kırık beyaz yazı */\n"
+        "}\n"
+        "QPushButton:pressed {\n"
+        "    /* Butona basıldığında (tıklandığında) durumu */\n"
+        "    background-color: #1a5276; /* Çok daha koyu mavi */\n"
+        "}")
+                self.geriButton.setObjectName("geriButton")
+                self.horizontalLayout_2.addWidget(self.geriButton)
+
+
                 self.stackedWidget.addWidget(self.page_2)
                 self.verticalLayout.addWidget(self.stackedWidget)
                 self.bottomPart = QtWidgets.QWidget(self.centralwidget)
@@ -531,8 +556,24 @@ class Ui_MainWindow(object):
                 self.gelismeButton.setText(_translate("MainWindow", "Gelişme"))
                 self.sonucButton.setText(_translate("MainWindow", "Sonuç"))
                 self.genelButton.setText(_translate("MainWindow", "Genel"))
+                self.geriButton.setText(_translate("MainWindow", "Geri Git"))
                 self.label_2.setText(_translate("MainWindow", "İlişkiler"))
                 self.label.setText(_translate("MainWindow", "Karakterler"))
+
+        def geri_git(self):
+                # Geri gitmek için stackedWidget'in indeksini 0 yap
+                self.stackedWidget.setCurrentIndex(0)
+                #grafik alanını temizle
+                self.IliskiGraphicsView.setScene(None)
+                #listeyi temizle
+                self.karakterlerListView.setModel(QtGui.QStandardItemModel())
+
+                self.iliski.hikaye_yolu = None
+                self.iliski.varyasyon2karakter = {}
+                self.iliski.text = ""
+                self.iliski.parcalar = []
+                self.iliski.tum_iliskiler = []
+                self.iliski.gecmis_cumleler = []
 
         def hikaye_sec(self):
                 dosya_yolu, _ = QtWidgets.QFileDialog.getOpenFileName(

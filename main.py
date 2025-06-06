@@ -17,6 +17,7 @@ if __name__ == "__main__":
     ui.sonucButton.clicked.connect(ui.sonuc_iliski)
     ui.duyguDegisimGrafigiButton.clicked.connect(ui.duygu_degisim_grafigi_goster)
     ui.genelButton.clicked.connect(ui.genel_iliski)
+    ui.geriButton.clicked.connect(ui.geri_git)
  
     sys.exit(app.exec_())
     
