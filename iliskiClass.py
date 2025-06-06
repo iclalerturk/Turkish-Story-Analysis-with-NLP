@@ -4,6 +4,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import re
 import spacy
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from PyQt5.QtGui import QImage, QPixmap
+import io
 
 class KarakterIliski:
     def __init__(self, hikaye_yolu, karakter_yolu="karakterler.txt"):
@@ -156,8 +159,10 @@ class KarakterIliski:
             iliskiler = self.duygusal_iliski_kur(cumle, gecenler, duygu, onceki)
             self.tum_iliskiler.extend(iliskiler)
             self.gecmis_cumleler.append(cumle)
+            
 
-        # 📈 Duygu eğrisi çizimi
+    def duygu_egrisi_cizme(self) -> QPixmap:
+    # 📈 Duygu eğrisi çizimi
         duygu_puanlari = []
         etiket2skor = {"positive": 1, "neutral": 0, "negative": -1}
         for iliski in self.tum_iliskiler:
@@ -169,15 +174,9 @@ class KarakterIliski:
 
         n = len(self.tum_iliskiler)
         bolum1_bitis = n // 3
-        bolum2_bitis = 2 * n // 3
-        bolumler = [
-            self.tum_iliskiler[:bolum1_bitis],
-            self.tum_iliskiler[bolum1_bitis:bolum2_bitis],
-            self.tum_iliskiler[bolum2_bitis:]
-        ]
-        basliklar = ["Giriş Bölümü", "Gelişme Bölümü", "Sonuç Bölümü"]
+        bolum2_bitis = 2 * n // 3      
 
-        plt.figure(figsize=(10, 4))
+        fig = plt.figure(figsize=(10, 4))
         plt.plot(duygu_akisi_smooth, color='purple', linewidth=2)
         plt.axvline(x=bolum1_bitis, color='gray', linestyle='--')
         plt.axvline(x=bolum2_bitis, color='gray', linestyle='--')
@@ -187,38 +186,20 @@ class KarakterIliski:
         plt.yticks([-1, 0, 1], ["Negatif", "Nötr", "Pozitif"])
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
-        plt.show()
 
-        for bolum, baslik in zip(bolumler, basliklar):
-            if not bolum:
-                continue
-            iliskiler_duygular = defaultdict(list)
-            for iliski in bolum:
-                c1, c2 = sorted([iliski["kim"], iliski["kime"]])
-                iliskiler_duygular[(c1, c2)].append(iliski["duygu"])
-            baskin_iliskiler = {}
-            for cift, duygular in iliskiler_duygular.items():
-                sayim = Counter(duygular)
-                baskin_duygu = sayim.most_common(1)[0][0]
-                baskin_iliskiler[cift] = baskin_duygu
-            G = nx.Graph()
-            for (kim, kime), duygu in baskin_iliskiler.items():
-                G.add_node(kim)
-                G.add_node(kime)
-                G.add_edge(kim, kime, duygu=duygu)
-            edge_colors = [self.duygu_renk.get(data['duygu'], 'black') for _, _, data in G.edges(data=True)]
-            plt.figure(figsize=(8, 6))
-            pos = nx.spring_layout(G, seed=42)
-            nx.draw(G, pos, with_labels=True, edge_color=edge_colors, node_color='lightblue',
-                    node_size=2000, font_size=10, font_weight='bold')
-            edge_labels = nx.get_edge_attributes(G, 'duygu')
-            nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='black')
-            plt.title(f"{baslik} Duygusal İlişki Ağı")
-            plt.axis('off')
-            plt.tight_layout()
-            plt.show()
+        # Belleğe çiz
+        canvas = FigureCanvasAgg(fig)
+        buf = io.BytesIO()
+        canvas.print_png(buf)
+        buf.seek(0)
+        plt.close(fig)
 
-        print("Genel İlişki Grafiği (Toplam):")
+        image = QImage.fromData(buf.getvalue())
+        pixmap = QPixmap.fromImage(image)
+
+        return pixmap
+
+    def genel_iliski_grafigi(self) -> QPixmap:
         iliskiler_duygular = defaultdict(list)
         for iliski in self.tum_iliskiler:
             c1, c2 = sorted([iliski["kim"], iliski["kime"]])
@@ -238,7 +219,7 @@ class KarakterIliski:
 
         edge_colors = [self.duygu_renk.get(data['duygu'], 'black') for _, _, data in G.edges(data=True)]
 
-        plt.figure(figsize=(10, 7))
+        fig = plt.figure(figsize=(10, 7))
         pos = nx.spring_layout(G, seed=42)
         nx.draw(G, pos, with_labels=True, edge_color=edge_colors, node_color='lightblue',
                 node_size=2000, font_size=10, font_weight='bold')
@@ -247,10 +228,84 @@ class KarakterIliski:
         plt.title("Genel Masal Karakterleri Duygusal İlişki Ağı")
         plt.axis('off')
         plt.tight_layout()
-        plt.show()
 
-if __name__ == "__main__":
-    iliski = KarakterIliski("NLP-Hikayeler/hikayeler/zehrakisahikaye.txt")
-    iliski.metin_yukle()
-    iliski.cumle_diyalog_ayirma()
-    iliski.islemler()
+        canvas = FigureCanvasAgg(fig)
+        buf = io.BytesIO()
+        canvas.print_png(buf)
+        buf.seek(0)
+        plt.close(fig)
+
+        image = QImage.fromData(buf.getvalue())
+        pixmap = QPixmap.fromImage(image)
+
+        return pixmap
+
+    def bolume_gore_grafik(self, baslik=None) -> QPixmap:
+        n = len(self.tum_iliskiler)
+        bolum1_bitis = n // 3
+        bolum2_bitis = 2 * n // 3
+        bolumler = [
+            self.tum_iliskiler[:bolum1_bitis],
+            self.tum_iliskiler[bolum1_bitis:bolum2_bitis],
+            self.tum_iliskiler[bolum2_bitis:]
+        ]
+
+        if baslik == "Giriş Bölümü":
+            bolum = bolumler[0]
+        elif baslik == "Gelişme Bölümü":
+            bolum = bolumler[1]
+        elif baslik == "Sonuç Bölümü":
+            bolum = bolumler[2]
+        else:
+            raise ValueError("Geçersiz bölüm başlığı. 'Giriş Bölümü', 'Gelişme Bölümü' veya 'Sonuç Bölümü' olmalıdır.")
+        
+        iliskiler_duygular = defaultdict(list)
+        for iliski in bolum:
+            c1, c2 = sorted([iliski["kim"], iliski["kime"]])
+            iliskiler_duygular[(c1, c2)].append(iliski["duygu"])
+
+        baskin_iliskiler = {}
+        for cift, duygular in iliskiler_duygular.items():
+            sayim = Counter(duygular)
+            baskin_duygu = sayim.most_common(1)[0][0]
+            baskin_iliskiler[cift] = baskin_duygu
+
+        G = nx.Graph()
+        for (kim, kime), duygu in baskin_iliskiler.items():
+            G.add_node(kim)
+            G.add_node(kime)
+            G.add_edge(kim, kime, duygu=duygu)
+
+        edge_colors = [self.duygu_renk.get(data['duygu'], 'black') for _, _, data in G.edges(data=True)]
+
+        fig = plt.figure(figsize=(8, 6))
+        pos = nx.spring_layout(G, seed=42)
+        nx.draw(G, pos, with_labels=True, edge_color=edge_colors, node_color='lightblue',
+                node_size=2000, font_size=10, font_weight='bold')
+        edge_labels = nx.get_edge_attributes(G, 'duygu')
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='black')
+        plt.title(f"{baslik} Duygusal İlişki Ağı")
+        plt.axis('off')
+        plt.tight_layout()
+
+        # Grafiği belleğe çiz
+        canvas = FigureCanvasAgg(fig)
+        buf = io.BytesIO()
+        canvas.print_png(buf)
+        buf.seek(0)
+        plt.close(fig)
+
+        image = QImage.fromData(buf.getvalue())
+        pixmap = QPixmap.fromImage(image)
+
+        return pixmap
+
+
+# if __name__ == "__main__":
+#     iliski = KarakterIliski("NLP-Hikayeler/hikayeler/zehrakisahikaye.txt")
+#     iliski.metin_yukle()
+#     iliski.cumle_diyalog_ayirma()
+#     iliski.islemler()
+#     iliski.duygu_egrisi_cizme()
+#     iliski.genel_iliski_grafigi()
+#     iliski.bolume_gore_grafik("Giriş Bölümü")

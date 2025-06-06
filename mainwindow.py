@@ -1,8 +1,12 @@
 from analizClass import MetinAnaliz
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QGraphicsScene
+
+from iliskiClass import KarakterIliski
 
 class Ui_MainWindow(object):
         def setupUi(self, MainWindow):
+                self.iliski = KarakterIliski(hikaye_yolu=None)
                 MainWindow.setObjectName("MainWindow")
                 MainWindow.resize(1200, 750)
                 palette = QtGui.QPalette()
@@ -555,10 +559,83 @@ class Ui_MainWindow(object):
                                 item.setEditable(False)
                                 model.appendRow(item)
                         self.karakterlerListView.setModel(model)
-                       
-                        
+
+                        self.iliski.hikaye_yolu = hikaye_yolu
+                        self.iliski.metin_yukle()
+                        self.iliski.cumle_diyalog_ayirma()
+                        self.iliski.islemler()
+                             
                 else:
                         QtWidgets.QMessageBox.warning(None, "Hata", "Lütfen bir hikaye dosyası seçin.")
+
+        def giris_iliski(self):
+                pixmap = self.iliski.bolume_gore_grafik("Giriş Bölümü")
+                scene = QGraphicsScene()
+                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
+                view_size = self.IliskiGraphicsView.size()
+                scaled_pixmap = pixmap.scaled(
+                    view_size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                scene.addPixmap(scaled_pixmap)
+                self.IliskiGraphicsView.setScene(scene)
+                self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
+        def gelisme_iliski(self):
+                pixmap = self.iliski.bolume_gore_grafik("Gelişme Bölümü")
+                scene = QGraphicsScene()
+                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
+                view_size = self.IliskiGraphicsView.size()
+                scaled_pixmap = pixmap.scaled(
+                    view_size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                scene.addPixmap(scaled_pixmap)
+                self.IliskiGraphicsView.setScene(scene)
+                self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
+        def sonuc_iliski(self):
+                pixmap = self.iliski.bolume_gore_grafik("Sonuç Bölümü")
+                scene = QGraphicsScene()
+                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
+                view_size = self.IliskiGraphicsView.size()
+                scaled_pixmap = pixmap.scaled(
+                    view_size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                scene.addPixmap(scaled_pixmap)
+                self.IliskiGraphicsView.setScene(scene)
+                self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
+
+        def duygu_degisim_grafigi_goster(self):
+                # Duygu değişimi grafiğini göster
+                pixmap = self.iliski.duygu_egrisi_cizme()
+                scene = QGraphicsScene()
+                # Grafik alanına sığdırmak için
+                view_size = self.IliskiGraphicsView.size()
+                scaled_pixmap = pixmap.scaled(
+                    view_size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                scene.addPixmap(scaled_pixmap)
+                self.IliskiGraphicsView.setScene(scene)
+                self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
+
+        def genel_iliski(self):
+                pixmap = self.iliski.genel_iliski_grafigi()
+                scene = QGraphicsScene()
+                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
+                view_size = self.IliskiGraphicsView.size()
+                scaled_pixmap = pixmap.scaled(
+                    view_size,
+                    QtCore.Qt.KeepAspectRatio,
+                    QtCore.Qt.SmoothTransformation
+                )
+                scene.addPixmap(scaled_pixmap)
+                self.IliskiGraphicsView.setScene(scene)
+                self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
 if __name__ == "__main__":
     import sys
