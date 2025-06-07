@@ -134,34 +134,67 @@ class MetinAnaliz:
         return groups    
 
     def merge_single_word_character(self, group1_index, character1, matched_characters, copy, visited_groups, character_count, group1):
+        dd=0
         for j, group2 in enumerate(copy):
             if j in visited_groups or group1_index == j:
                 continue
 
             character2 = group2["karakter"]
-            if character1 in character2.split():  # karakter1, karakter2'nin içinde geçiyorsa
-                matched_characters.append((j, character2, character_count.get(character2, 0)))
+            head_word_2 = self.get_head_word(character2)
 
-        if matched_characters:   # eşleşen karakter varsa, en çok geçen karaktere ekle
-            most_frequent = max(matched_characters, key=lambda x: x[2])  # en çok geçiş sayısına sahip karakteri bul
+            if character1 in character2.split():
+                dd=1
+                # Tek kelimelik karakter, diğer karakterin içinde geçiyor
+                matched_characters.append((j, character2, character_count.get(character2, 0)))
+            else:
+                # Çekirdek kelimeler benziyorsa
+                if get_close_matches(character1, [head_word_2], cutoff=0.817):
+                    matched_characters.append((j, character2, character_count.get(character2, 0)))
+
+        if matched_characters and dd==1:
+            most_frequent = max(matched_characters, key=lambda x: x[2])
             j, character2, _ = most_frequent
-                    
-            copy[j]["gruplar"][0].extend(group1["gruplar"][0])  # karakter2'nin grubuna karakter1'i ekle
-            character_count[character2] = character_count.get(character2, 0) + character_count.get(character1, 0)  # karakter2'nin geçiş sayısına karakter1'in geçiş sayısını ekle
+
+            copy[j]["gruplar"][0].extend(group1["gruplar"][0])
+            character_count[character2] = character_count.get(character2, 0) + character_count.get(character1, 0)
             visited_groups.add(group1_index)
+        elif matched_characters and dd==0:
+            # En çok geçen karakteri bul
+            most_frequent = max(matched_characters, key=lambda x: x[2])
+            j, character2, _ = most_frequent
+
+            count1 = character_count.get(character1, 0)
+            count2 = character_count.get(character2, 0)
+
+            # Daha az geçen karakterin grubunu, daha çok geçene ekle
+            if count1 <= count2:
+                # group1 → group2
+                copy[j]["gruplar"][0].extend(group1["gruplar"][0])
+                character_count[character2] = count1 + count2
+                visited_groups.add(group1_index)
+            else:
+                # group2 → group1
+                group1["gruplar"][0].extend(copy[j]["gruplar"][0])
+                character_count[character1] = count1 + count2
+                visited_groups.add(j)
+
+
+
+
 
     def merge_similar_names_by_threshold(self, group1_index, character1, copy, visited_groups, character_count, merged_group, all_similars, threshold):
         for j in range(group1_index + 1, len(copy)):
-                if j in visited_groups:
-                    continue
+            if j in visited_groups:
+                continue
 
-                group2 = copy[j]
-                character2 = group2["karakter"]
+            group2 = copy[j]
+            character2 = group2["karakter"]
 
-                if character1 != character2 and get_close_matches(character1, [character2], cutoff=threshold):
-                    merged_group.extend(group2["gruplar"][0])
-                    all_similars.append((character2, character_count.get(character2, 0)))
-                    visited_groups.add(j)
+            if character1 != character2 and get_close_matches(character1, [character2], cutoff=threshold):
+                merged_group.extend(group2["gruplar"][0])
+                all_similars.append((character2, character_count.get(character2, 0)))
+                visited_groups.add(j)
+
             
     def merge_similar_named_groups(self, groups, character_count, threshold):
         new_groups = []
@@ -198,6 +231,9 @@ class MetinAnaliz:
             })
 
         return new_groups
+
+
+
     
     def _extract_ner_characters(self, doc):
         for ent in doc.ents:
@@ -349,7 +385,7 @@ class MetinAnaliz:
         for character, count in self.character_counter.items():
             print(f"{character}: {count}")
 
-        groups = self.merge_similar_named_groups(groups, self.character_counter, threshold=0.7500001)
+        groups = self.merge_similar_named_groups(groups, self.character_counter, threshold=0.817)
         print("\nbirleştirme:")
         for i, group in enumerate(groups, 1):
             print(f"Grup {i}: {group}")
@@ -382,7 +418,7 @@ class MetinAnaliz:
         
         return convert_sorted_groups
     
-# if __name__ == "__main__":
-#     analiz = MetinAnaliz('NLP-Hikayeler\hikayeler\zehrakisahikaye.txt')
-#     analiz.tum_islemler()
+if __name__ == "__main__":
+    analiz = MetinAnaliz('NLP-Hikayeler\hikayeler\\zehrakisahikaye.txt')
+    analiz.tum_islemler()
    

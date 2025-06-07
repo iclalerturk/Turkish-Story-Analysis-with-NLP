@@ -177,11 +177,23 @@ class CharacterRelations:
         if len(change_scores) < 2:
             raise ValueError("Not enough emotion data.")
 
-        # Find two biggest break points
+        # Find two biggest break points with minimum distance constraint
         scores_copy = change_scores.copy()
         first_break = scores_copy.index(max(scores_copy)) + 1
-        scores_copy[first_break - 1] = -1
-        second_break = scores_copy.index(max(scores_copy)) + 1
+        scores_copy[first_break - 1] = -1  # Mark first break as used
+
+        # Minimum mesafe (örnek: toplam uzunluğun %10'u)
+        min_distance = int(len(change_scores) * 0.15)
+
+        # İkinci kırılma noktası için uygun adayları filtrele
+        second_break_candidates = [(i, val) for i, val in enumerate(scores_copy) if abs(i + 1 - first_break) >= min_distance]
+
+        if second_break_candidates:
+            second_break = max(second_break_candidates, key=lambda x: x[1])[0] + 1
+        else:
+            # Eğer uygun aday yoksa, en büyük değeri seç (yine de çok yakın olabilir)
+            second_break = scores_copy.index(max(scores_copy)) + 1
+
         break_points = sorted([first_break, second_break])
 
         # Plotting
@@ -207,6 +219,7 @@ class CharacterRelations:
         pixmap = QPixmap.fromImage(image)
 
         return pixmap
+
 
     def overall_relation_graph(self) -> QPixmap:
         relations_emotions = defaultdict(list)
