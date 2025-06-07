@@ -2,11 +2,11 @@ from analizClass import MetinAnaliz
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QGraphicsScene
 
-from iliskiClass import KarakterIliski
+from iliskiClass import CharacterRelations
 
 class Ui_MainWindow(object):
         def setupUi(self, MainWindow):
-                self.iliski = KarakterIliski(hikaye_yolu=None)
+                self.iliski = CharacterRelations(story_path=None)
                 MainWindow.setObjectName("MainWindow")
                 MainWindow.resize(1200, 750)
                 palette = QtGui.QPalette()
@@ -568,12 +568,12 @@ class Ui_MainWindow(object):
                 #listeyi temizle
                 self.karakterlerListView.setModel(QtGui.QStandardItemModel())
 
-                self.iliski.hikaye_yolu = None
-                self.iliski.varyasyon2karakter = {}
+                self.iliski.story_path = None
+                self.iliski.variation_to_character = {}
                 self.iliski.text = ""
-                self.iliski.parcalar = []
-                self.iliski.tum_iliskiler = []
-                self.iliski.gecmis_cumleler = []
+                self.iliski.segments = []
+                self.iliski.all_relations = []
+                self.iliski.past_sentences = []
 
         def hikaye_sec(self):
                 dosya_yolu, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -601,16 +601,16 @@ class Ui_MainWindow(object):
                                 model.appendRow(item)
                         self.karakterlerListView.setModel(model)
 
-                        self.iliski.hikaye_yolu = hikaye_yolu
-                        self.iliski.metin_yukle()
-                        self.iliski.cumle_diyalog_ayirma()
-                        self.iliski.islemler()
+                        self.iliski.story_path = hikaye_yolu
+                        self.iliski.load_text()
+                        self.iliski.split_sentence_dialog()
+                        self.iliski.process()
                              
                 else:
                         QtWidgets.QMessageBox.warning(None, "Hata", "Lütfen bir hikaye dosyası seçin.")
 
         def giris_iliski(self):
-                pixmap = self.iliski.bolume_gore_grafik("Giriş Bölümü")
+                pixmap = self.iliski.section_based_graph("Giriş Bölümü")
                 scene = QGraphicsScene()
                 # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
@@ -623,7 +623,7 @@ class Ui_MainWindow(object):
                 self.IliskiGraphicsView.setScene(scene)
                 self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
         def gelisme_iliski(self):
-                pixmap = self.iliski.bolume_gore_grafik("Gelişme Bölümü")
+                pixmap = self.iliski.section_based_graph("Gelişme Bölümü")
                 scene = QGraphicsScene()
                 # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
@@ -636,7 +636,7 @@ class Ui_MainWindow(object):
                 self.IliskiGraphicsView.setScene(scene)
                 self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
         def sonuc_iliski(self):
-                pixmap = self.iliski.bolume_gore_grafik("Sonuç Bölümü")
+                pixmap = self.iliski.section_based_graph("Sonuç Bölümü")
                 scene = QGraphicsScene()
                 # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
@@ -651,7 +651,7 @@ class Ui_MainWindow(object):
 
         def duygu_degisim_grafigi_goster(self):
                 # Duygu değişimi grafiğini göster
-                pixmap = self.iliski.duygu_egrisi_cizme()
+                pixmap = self.iliski.draw_emotion_curve()
                 scene = QGraphicsScene()
                 # Grafik alanına sığdırmak için
                 view_size = self.IliskiGraphicsView.size()
@@ -665,7 +665,7 @@ class Ui_MainWindow(object):
                 self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
         def genel_iliski(self):
-                pixmap = self.iliski.genel_iliski_grafigi()
+                pixmap = self.iliski.overall_relation_graph()
                 scene = QGraphicsScene()
                 # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
