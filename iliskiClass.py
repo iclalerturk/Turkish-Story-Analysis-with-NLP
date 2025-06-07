@@ -132,11 +132,11 @@ class KarakterIliski:
             # diyalog durumunda:
             # 1) önceki karakter varsa, diyalog içindeki tüm karakterlerle ilişki kur
             # 2. diyalog içindeki karakterler kendi aralarında da ilişki kurabilir
-            relationships = self.build_dialog_relationships(characters, relationships, sentiment, previous_character=None)
+            relationships = relationships = self.build_dialog_relationships(characters, relationships, sentiment, previous_character=None)
         
         else:
             # diyalog değilse, karakterler arasında normal ilişki kur
-            relationships = self.build_narrative_relationships(characters, relationships, sentiment, previous_character=None)
+            relationships = relationships = self.build_narrative_relationships(characters, relationships, sentiment, previous_character=None)
         
         return relationships
 
