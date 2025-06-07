@@ -7,189 +7,206 @@ import spacy
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PyQt5.QtGui import QImage, QPixmap
 import io
+from sklearn.metrics import pairwise_distances
+import numpy as np
 
 class KarakterIliski:
-    def __init__(self, hikaye_yolu, karakter_yolu="karakterler.txt"):
-        # 🔧 NLP ve Model ayarları
+    def __init__(self, text_path, character_path="karakterler.txt"):
         self.model_name = "savasy/bert-base-turkish-sentiment-cased"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
         self.classifier = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer)
         self.nlp = spacy.load("tr_core_news_trf")
         
-        # 📄 Metin ve karakter-varyasyon yükleme
-        self.hikaye_yolu = hikaye_yolu
-        self.karakter_yolu = karakter_yolu
-        self.varyasyon2karakter = {}
+        self.text_path = text_path
+        self.character_path = character_path
+        self.variation_2_character = {}
         self.text = ""
-        self.parcalar = []
-        self.tum_iliskiler = []
-        self.gecmis_cumleler = []
+        self.sentences = []
+        self.all_relationships = []
+        self.previous_sentences = []
         self.pattern = re.compile(r'“[^“”]+”|"[^"]+"|[^“”".]+[.]')
-        # Duygu renkleri
-        self.duygu_renk = {"positive": "green", "negative": "red", "neutral": "gray"}
-        self.is_diyalog = False
-    def metin_yukle(self):
-        with open(self.hikaye_yolu, "r", encoding="utf-8") as file:
+        self.sentiment_colors = {"positive": "green", "negative": "red", "neutral": "gray"}  # duygu renkleri
+        self.is_dialog = False
+
+    def load_text(self):
+        with open(self.text_path, "r", encoding="utf-8") as file:
             self.text = file.read()
             
-        with open(self.karakter_yolu, "r", encoding="utf-8") as file:
+        with open(self.character_path, "r", encoding="utf-8") as file:
             for line in file:
                 parts = [p.strip() for p in line.strip().split(",") if p.strip()]
                 if parts:
-                    ana_karakter = parts[0]
-                    for varyasyon in parts:
-                        self.varyasyon2karakter[varyasyon.lower()] = ana_karakter
+                    main_character = parts[0]
+                    for variation in parts:
+                        self.variation_2_character[variation.lower()] = main_character
                         
-    def cumle_diyalog_ayirma(self):
-        for eslesme in re.finditer(self.pattern, self.text):
-            cumle = eslesme.group().strip()
-            if not cumle:
+    def split_sentences_and_dialogues(self):
+        for match in re.finditer(self.pattern, self.text):
+            sentence = match.group().strip()
+            if not sentence:
                 continue
-            self.is_diyalog = (cumle.startswith("“") and cumle.endswith("”")) or (cumle.startswith('"') and cumle.endswith('"'))
-            self.parcalar.append((cumle.strip("“”\""), self.is_diyalog))
+            self.is_dialog = (sentence.startswith("“") and sentence.endswith("”")) or (sentence.startswith('"') and sentence.endswith('"'))
+            self.sentences.append((sentence.strip("“”\""), self.is_dialog))
 
-    # 🔍 Yardımcı fonksiyonlar
-    def karakterleri_bul(self,cumle):
-        cumle = cumle.lower()
+    def find_characters(self,sentence):  # yardımcı fonksiyon
+        sentence = sentence.lower()
         bulunanlar = set()
-        for varyasyon, karakter in self.varyasyon2karakter.items():
-            pattern = r'\b' + re.escape(varyasyon.lower()) + r'(?:[ınunıneoaüie]{0,4})?\b'
-            if re.search(pattern, cumle):
+        for variation, karakter in self.variation_2_character.items():
+            pattern = r'\b' + re.escape(variation.lower()) + r'(?:[ınunıneoaüie]{0,4})?\b'
+            if re.search(pattern, sentence):
                 bulunanlar.add(karakter)
         return list(bulunanlar)
 
-    def cumlede_zamir_var_mi(self,doc):
+    def has_pronoun(self,doc):
         return any(token.pos_ == "PRON" for token in doc)
 
-    def onceki_karakteri_bul(self, max_geri_bakis=3):
-        adaylar = []
-        for cumle in reversed(self.gecmis_cumleler[-max_geri_bakis:]):
-            gecen_karakterler = self.karakterleri_bul(cumle)
-            if gecen_karakterler:
-                adaylar.extend(gecen_karakterler)
+    def extract_unique_characters(self, candidates):
         seen = set()
-        benzersiz_adaylar = []
-        for a in adaylar:
+        unique_char = []
+        for a in candidates:
             if a not in seen:
-                benzersiz_adaylar.append(a)
+                unique_char.append(a)
                 seen.add(a)
-        if len(benzersiz_adaylar) == 1:
-            return benzersiz_adaylar[0]
-        for cumle in reversed(self.gecmis_cumleler[-max_geri_bakis:]):
-            doc = self.nlp(cumle)
-            for token in doc:
-                if token.dep_ == "nsubj":
-                    kelime = token.text.lower()
-                    for varyasyon, karakter in self.varyasyon2karakter.items():
-                        if varyasyon.lower() == kelime:
-                            return karakter
-        if benzersiz_adaylar:
-            return benzersiz_adaylar[0]
-        return None
+        return unique_char
 
-    def duygusal_iliski_kur(self, cumle, karakterler, duygu, onceki_karakter=None):
-        iliskiler = []
+    def find_subject_character(self, sentence):
+        doc = self.nlp(sentence)
+        for token in doc:
+            if token.dep_ == "nsubj":
+                word = token.text.lower()
+                for variation, character in self.variation_2_character.items():
+                    if variation.lower() == word:
+                        return character
+
+    def find_previous_char(self, max_lookback=3):
+        candidates = []
+        for sentence in reversed(self.previous_sentences[-max_lookback:]):
+            mentioned_characters = self.find_characters(sentence)
+            if mentioned_characters:
+                candidates.extend(mentioned_characters)
+
+        seen = set()
+        unique_candidate = []
+        for a in candidates:
+            if a not in seen:
+                unique_candidate.append(a)
+                seen.add(a)
+                
+        if len(unique_candidate) == 1:
+            return unique_candidate[0]
         
-        if self.is_diyalog:
-            # Diyalog durumunda:
-            # 1. Önceki karakter varsa, diyalog içindeki tüm karakterlerle ilişki kur
-            if onceki_karakter:
-                # Diyalog içindeki karakterlerle önceki karakter arasında ilişki
-                for hedef in karakterler:
-                    if hedef != onceki_karakter:
-                        iliskiler.append({"kim": onceki_karakter, "kime": hedef, "duygu": duygu})
-            
-            # 2. Diyalog içindeki karakterler kendi aralarında da ilişki kurabilir
-            if len(karakterler) >= 2:
-                for i in range(len(karakterler)):
-                    for j in range(i + 1, len(karakterler)):
-                        if karakterler[i] != karakterler[j]:
-                            iliskiler.append({"kim": karakterler[i], "kime": karakterler[j], "duygu": duygu})
+        for sentence in reversed(self.previous_sentences[-max_lookback:]):
+            return self.find_subject_character(sentence)
+                        
+        if unique_candidate:
+            return unique_candidate[0]
+        return None
+    
+    def build_dialog_relationships(self, characters, relationships, sentiment, previous_character=None):
+        if previous_character:  # diyalog içindeki karakterlerle önceki karakter arasında ilişki
+            for target in characters:
+                if target != previous_character:
+                    relationships.append({"kim": previous_character, "kime": target, "duygu": sentiment})
+        if len(characters) >= 2:  # diyalog içindeki karakterler kendi aralarında da ilişki kurabilir
+            for i in range(len(characters)):
+                for j in range(i + 1, len(characters)):
+                    if characters[i] != characters[j]:
+                        relationships.append({"kim": characters[i], "kime": characters[j], "duygu": sentiment})
+        return relationships
+
+    def build_narrative_relationships(self, characters, relationships, sentiment, previous_character=None):
+        if len(characters) >= 2:  # diyalog değilse, karakterler arasında normal ilişki kur
+            for i in range(len(characters)):
+                for j in range(i + 1, len(characters)):
+                    if characters[i] != characters[j]:
+                        relationships.append({"kim": characters[i], "kime": characters[j], "duygu": sentiment})
+        elif len(characters) == 1 and previous_character and characters[0] != previous_character:  # tek karakter varsa ve öncesinde karakter varsa, onlarla ilişki kur
+            relationships.append({"kim": previous_character, "kime": characters[0], "duygu": sentiment})
+        return relationships
+
+    def build_sentiment_relationship(self, cumle, characters, sentiment, previous_character=None):
+        relationships = []
+        
+        if self.is_dialog:
+            # diyalog durumunda:
+            # 1) önceki karakter varsa, diyalog içindeki tüm karakterlerle ilişki kur
+            # 2. diyalog içindeki karakterler kendi aralarında da ilişki kurabilir
+            self.build_dialog_relationships(characters, relationships, sentiment, previous_character=None)
         
         else:
-            # Diyalog değilse, karakterler arasında normal ilişki kur
-            if len(karakterler) >= 2:
-                for i in range(len(karakterler)):
-                    for j in range(i + 1, len(karakterler)):
-                        if karakterler[i] != karakterler[j]:
-                            iliskiler.append({"kim": karakterler[i], "kime": karakterler[j], "duygu": duygu})
-            
-            # Tek karakter varsa ve önceki karakter varsa, onlarla ilişki kur
-            elif len(karakterler) == 1 and onceki_karakter and karakterler[0] != onceki_karakter:
-                iliskiler.append({"kim": onceki_karakter, "kime": karakterler[0], "duygu": duygu})
+            # diyalog değilse, karakterler arasında normal ilişki kur
+            self.build_narrative_relationships(characters, relationships, sentiment, previous_character=None)
         
-        return iliskiler
+        return relationships
 
     def moving_average(self,data, window_size=5):
         return [sum(data[i:i+window_size])/window_size for i in range(len(data)-window_size+1)]
 
-    def islemler(self):
-        for i, (cumle, self.is_diyalog) in enumerate(self.parcalar):
-            doc = self.nlp(cumle)
-            gecenler = self.karakterleri_bul(cumle)
-            if not gecenler and self.cumlede_zamir_var_mi(doc):
-                onceki = self.onceki_karakteri_bul()
-                tahmini_karakterler = []
-                if self.is_diyalog:
-                    sonraki = None
-                    for j in range(i + 1, len(self.parcalar)):
-                        sonraki_cumle, _ = self.parcalar[j]
-                        sonraki_karakterler = self.karakterleri_bul(sonraki_cumle)
-                        if sonraki_karakterler:
-                            sonraki = sonraki_karakterler[0]
+    def process(self):
+        for i, (sentence, self.is_dialog) in enumerate(self.sentences):
+            doc = self.nlp(sentence)
+            mentioned = self.find_characters(sentence)
+            if not mentioned and self.has_pronoun(doc):
+                previous = self.find_previous_char()
+                candidate_characters = []
+                if self.is_dialog:
+                    next_character = None
+                    for j in range(i + 1, len(self.sentences)):
+                        sonraki_cumle, _ = self.sentences[j]
+                        next_characters = self.find_characters(sonraki_cumle)
+                        if next_characters:
+                            next_character = next_characters[0]
                             break
-                    if onceki:
-                        tahmini_karakterler.append(onceki)
-                    if sonraki:
-                        tahmini_karakterler.append(sonraki)
+                    if previous:
+                        candidate_characters.append(previous)
+                    if next_character:
+                        candidate_characters.append(next_character)
                 else:
-                    if onceki:
-                        tahmini_karakterler.append(onceki)
-                gecenler = tahmini_karakterler
-            if not gecenler:
-                self.gecmis_cumleler.append(cumle)
+                    if previous:
+                        candidate_characters.append(previous)
+                mentioned = candidate_characters
+            if not mentioned:
+                self.previous_sentences.append(sentence)
                 continue
             try:
-                duygu = self.classifier(cumle)[0]["label"]
+                sentiment = self.classifier(sentence)[0]["label"]
             except:
-                self.gecmis_cumleler.append(cumle)
+                self.previous_sentences.append(sentence)
                 continue
-            onceki = self.onceki_karakteri_bul()
-            iliskiler = self.duygusal_iliski_kur(cumle, gecenler, duygu, onceki)
-            self.tum_iliskiler.extend(iliskiler)
-            self.gecmis_cumleler.append(cumle)
+            previous = self.find_previous_char()
+            relationships = self.build_sentiment_relationship(sentence, mentioned, sentiment, previous)
+            self.all_relationships.extend(relationships)
+            self.previous_sentences.append(sentence)
             
 
-    def duygu_egrisi_cizme(self) -> QPixmap:
-        # 📈 Duygu eğrisi çizimi
-        duygu_puanlari = []
-        etiket2skor = {"positive": 1, "neutral": 0, "negative": -1}
-        for iliski in self.tum_iliskiler:
-            duygu = iliski["duygu"]
-            skor = etiket2skor.get(duygu, 0)
-            duygu_puanlari.append(skor)
+    def draw_sentiment_curve(self) -> QPixmap:
+        sentiment_scores = []
+        label_2_score = {"positive": 1, "neutral": 0, "negative": -1}
+        for relationship in self.all_relationships:
+            sentiment = relationship["duygu"]
+            skor = label_2_score.get(sentiment, 0)
+            sentiment_scores.append(skor)
 
-        # Hareketli ortalama ile yumuşatma
-        duygu_akisi_smooth = self.moving_average(duygu_puanlari, window_size=5)
+        smoothed_sentiment_flow = self.moving_average(sentiment_scores, window_size=5)  # hareketli ortalama ile yumuşatma
 
-        # Duyguların değişim şiddetini hesapla
-        degisim_skorlari = [abs(duygu_akisi_smooth[i] - duygu_akisi_smooth[i - 1]) for i in range(1, len(duygu_akisi_smooth))]
-        if len(degisim_skorlari) < 2:
+        # duyguların değişim şiddetini hesapla
+        sentiment_change_scores = [abs(smoothed_sentiment_flow[i] - smoothed_sentiment_flow[i - 1]) for i in range(1, len(smoothed_sentiment_flow))]
+        if len(sentiment_change_scores) < 2:
             raise ValueError("Yeterli duygu verisi yok.")
 
-        # En büyük iki kırılma noktasını bul
-        skorlar_kopya = degisim_skorlari.copy()
-        ilk_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
-        skorlar_kopya[ilk_kirilma - 1] = -1
-        ikinci_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
-        bolum_noktalar = sorted([ilk_kirilma, ikinci_kirilma])
+        # en büyük iki kırılma noktasını bul
+        scores_copy = sentiment_change_scores.copy()
+        first_change = scores_copy.index(max(scores_copy)) + 1
+        scores_copy[first_change - 1] = -1
+        second_change = scores_copy.index(max(scores_copy)) + 1
+        text_section_points = sorted([first_change, second_change])
 
         # Grafik çizimi
         fig = plt.figure(figsize=(10, 4))
-        plt.plot(duygu_akisi_smooth, color='purple', linewidth=2)
-        plt.axvline(x=bolum_noktalar[0], color='gray', linestyle='--', label="Bölüm Geçişi")
-        plt.axvline(x=bolum_noktalar[1], color='gray', linestyle='--')
+        plt.plot(smoothed_sentiment_flow, color='purple', linewidth=2)
+        plt.axvline(x=text_section_points[0], color='gray', linestyle='--', label="Bölüm Geçişi")
+        plt.axvline(x=text_section_points[1], color='gray', linestyle='--')
         plt.title("Duygu Eğrisi (Hareketli Ortalama ile)")
         plt.xlabel("Zaman (Cümle/İlişki Sırası)")
         plt.ylabel("Duygu Skoru")
@@ -209,25 +226,25 @@ class KarakterIliski:
 
         return pixmap
 
-    def genel_iliski_grafigi(self) -> QPixmap:
-        iliskiler_duygular = defaultdict(list)
-        for iliski in self.tum_iliskiler:
-            c1, c2 = sorted([iliski["kim"], iliski["kime"]])
-            iliskiler_duygular[(c1, c2)].append(iliski["duygu"])
+    def overall_relationship_graph(self) -> QPixmap:
+        relationships_sentiments = defaultdict(list)
+        for relationship in self.all_relationships:
+            c1, c2 = sorted([relationship["kim"], relationship["kime"]])
+            relationships_sentiments[(c1, c2)].append(relationship["duygu"])
 
-        baskin_iliskiler = {}
-        for cift, duygular in iliskiler_duygular.items():
-            sayim = Counter(duygular)
-            baskin_duygu = sayim.most_common(1)[0][0]
-            baskin_iliskiler[cift] = baskin_duygu
+        dominant_relationships = {}
+        for character_pair, sentiments in relationships_sentiments.items():
+            count = Counter(sentiments)
+            dominant_sentiment = count.most_common(1)[0][0]
+            dominant_relationships[character_pair] = dominant_sentiment
 
         G = nx.Graph()
-        for (kim, kime), duygu in baskin_iliskiler.items():
+        for (kim, kime), duygu in dominant_relationships.items():
             G.add_node(kim)
             G.add_node(kime)
             G.add_edge(kim, kime, duygu=duygu)
 
-        edge_colors = [self.duygu_renk.get(data['duygu'], 'black') for _, _, data in G.edges(data=True)]
+        edge_colors = [self.sentiment_colors.get(data['duygu'], 'black') for _, _, data in G.edges(data=True)]
 
         fig = plt.figure(figsize=(10, 7))
         pos = nx.spring_layout(G, seed=42)
@@ -250,67 +267,63 @@ class KarakterIliski:
 
         return pixmap
 
-    def bolume_gore_grafik(self, baslik=None) -> QPixmap:
-        from sklearn.metrics import pairwise_distances
-        import numpy as np
-
-        # Duyguları vektörleştirme (sadece sıralı olarak işlenebilir hale getirme)
-        duygu_sirasi = [iliski["duygu"] for iliski in self.tum_iliskiler]
-        duygu_sayisi = len(duygu_sirasi)
+    def plot_graph_by_section(self, title=None) -> QPixmap:
+        sentiment_sequence = [iliski["duygu"] for iliski in self.all_relationships]  # duyguları vektörleştirme (sadece sıralı olarak işlenebilir hale getirme)
+        sentiment_count = len(sentiment_sequence)
         
-        if duygu_sayisi < 3:
+        if sentiment_count < 3:
             raise ValueError("Yeterli ilişki verisi yok (en az 3 ilişki gerekli)")
 
         # Duyguları bir indeks listesine çevir
-        benzersiz_duygular = list(set(duygu_sirasi))
-        duygu2idx = {duygu: i for i, duygu in enumerate(benzersiz_duygular)}
-        vektorler = [duygu2idx[d] for d in duygu_sirasi]
+        unique_sentiments = list(set(sentiment_sequence))
+        sentiment_2_idx = {sentiment: i for i, sentiment in enumerate(unique_sentiments)}
+        vectors = [sentiment_2_idx[d] for d in sentiment_sequence]
 
         # Değişim skorlarını hesapla (birbirini takip eden duygular arasındaki fark)
-        degisim_skorlari = [abs(vektorler[i] - vektorler[i - 1]) for i in range(1, len(vektorler))]
+        score_change = [abs(vectors[i] - vectors[i - 1]) for i in range(1, len(vectors))]
 
         # En büyük iki kırılma noktası bulunur
-        skorlar_kopya = degisim_skorlari.copy()
-        ilk_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
-        skorlar_kopya[ilk_kirilma - 1] = -1  # ilkini eledik
-        ikinci_kirilma = skorlar_kopya.index(max(skorlar_kopya)) + 1
+        score_copy = score_change.copy()
+        firs_sentiment_change = score_copy.index(max(score_copy)) + 1
+        score_copy[firs_sentiment_change - 1] = -1  # ilkini eledik
+        second_sentiment_change = score_copy.index(max(score_copy)) + 1
 
         # Sıraya göre ayarlama (garanti)
-        bolum_noktalar = sorted([ilk_kirilma, ikinci_kirilma])
+        section_points = sorted([firs_sentiment_change, second_sentiment_change])
 
-        bolum1 = self.tum_iliskiler[:bolum_noktalar[0]]
-        bolum2 = self.tum_iliskiler[bolum_noktalar[0]:bolum_noktalar[1]]
-        bolum3 = self.tum_iliskiler[bolum_noktalar[1]:]
+        introduction = self.all_relationships[:section_points[0]]
+        development = self.all_relationships[section_points[0]:section_points[1]]
+        conclusion = self.all_relationships[section_points[1]:]
 
-        bolumler = {
-            "Giriş Bölümü": bolum1,
-            "Gelişme Bölümü": bolum2,
-            "Sonuç Bölümü": bolum3
+        sections = {
+            "Giriş Bölümü": introduction,
+            "Gelişme Bölümü": development,
+            "Sonuç Bölümü": conclusion
         }
 
-        if baslik not in bolumler:
+        if title not in sections:
             raise ValueError("Geçersiz bölüm başlığı. 'Giriş Bölümü', 'Gelişme Bölümü' veya 'Sonuç Bölümü' olmalıdır.")
 
-        bolum = bolumler[baslik]
+        section = sections[title]
 
-        iliskiler_duygular = defaultdict(list)
-        for iliski in bolum:
-            c1, c2 = sorted([iliski["kim"], iliski["kime"]])
-            iliskiler_duygular[(c1, c2)].append(iliski["duygu"])
+        relationships_sentiments = defaultdict(list)
+        for relationship in section:
+            c1, c2 = sorted([relationship["kim"], relationship["kime"]])
+            relationships_sentiments[(c1, c2)].append(relationship["duygu"])
 
-        baskin_iliskiler = {}
-        for cift, duygular in iliskiler_duygular.items():
-            sayim = Counter(duygular)
-            baskin_duygu = sayim.most_common(1)[0][0]
-            baskin_iliskiler[cift] = baskin_duygu
+        dominant_relationships = {}
+        for character_pair, sentiments in relationships_sentiments.items():
+            sayim = Counter(sentiments)
+            dominant_sentiment = sayim.most_common(1)[0][0]
+            dominant_relationships[character_pair] = dominant_sentiment
 
         G = nx.Graph()
-        for (kim, kime), duygu in baskin_iliskiler.items():
+        for (kim, kime), duygu in dominant_relationships.items():
             G.add_node(kim)
             G.add_node(kime)
             G.add_edge(kim, kime, duygu=duygu)
 
-        edge_colors = [self.duygu_renk.get(data['duygu'], 'black') for _, _, data in G.edges(data=True)]
+        edge_colors = [self.sentiment_colors.get(data['duygu'], 'black') for _, _, data in G.edges(data=True)]
 
         fig = plt.figure(figsize=(8, 6))
         pos = nx.spring_layout(G, seed=42)
@@ -318,7 +331,7 @@ class KarakterIliski:
                 node_size=2000, font_size=10, font_weight='bold')
         edge_labels = nx.get_edge_attributes(G, 'duygu')
         nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='black')
-        plt.title(f"{baslik} Duygusal İlişki Ağı")
+        plt.title(f"{title} Duygusal İlişki Ağı")
         plt.axis('off')
         plt.tight_layout()
 
