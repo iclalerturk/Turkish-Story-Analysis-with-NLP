@@ -61,14 +61,14 @@ class KarakterIliski:
     def has_pronoun(self,doc):
         return any(token.pos_ == "PRON" for token in doc)
 
-    def extract_unique_characters(self, candidates):
-        seen = set()
-        unique_char = []
-        for a in candidates:
-            if a not in seen:
-                unique_char.append(a)
-                seen.add(a)
-        return unique_char
+    # def extract_unique_characters(self, candidates):
+    #     seen = set()
+    #     unique_char = []
+    #     for a in candidates:
+    #         if a not in seen:
+    #             unique_char.append(a)
+    #             seen.add(a)
+    #     return unique_char
 
     def find_subject_character(self, sentence):
         doc = self.nlp(sentence)
@@ -132,11 +132,11 @@ class KarakterIliski:
             # diyalog durumunda:
             # 1) önceki karakter varsa, diyalog içindeki tüm karakterlerle ilişki kur
             # 2. diyalog içindeki karakterler kendi aralarında da ilişki kurabilir
-            self.build_dialog_relationships(characters, relationships, sentiment, previous_character=None)
+            relationships = self.build_dialog_relationships(characters, relationships, sentiment, previous_character=None)
         
         else:
             # diyalog değilse, karakterler arasında normal ilişki kur
-            self.build_narrative_relationships(characters, relationships, sentiment, previous_character=None)
+            relationships = self.build_narrative_relationships(characters, relationships, sentiment, previous_character=None)
         
         return relationships
 
