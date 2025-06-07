@@ -418,7 +418,7 @@ class MetinAnaliz:
         
         return convert_sorted_groups
     
-if __name__ == "__main__":
-    analiz = MetinAnaliz('NLP-Hikayeler\hikayeler\\zehrakisahikaye.txt')
-    analiz.tum_islemler()
+# if __name__ == "__main__":
+#     analiz = MetinAnaliz('NLP-Hikayeler\hikayeler\\zehrakisahikaye.txt')
+#     analiz.tum_islemler()
    
