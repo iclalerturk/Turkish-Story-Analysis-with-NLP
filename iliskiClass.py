@@ -63,29 +63,7 @@ class CharacterRelations:
     def contains_pronoun(self, doc):
         return any(token.pos_ == "PRON" for token in doc)
 
-<<<<<<< Updated upstream
-    # def extract_unique_characters(self, candidates):
-    #     seen = set()
-    #     unique_char = []
-    #     for a in candidates:
-    #         if a not in seen:
-    #             unique_char.append(a)
-    #             seen.add(a)
-    #     return unique_char
-
-    def find_subject_character(self, sentence):
-        doc = self.nlp(sentence)
-        for token in doc:
-            if token.dep_ == "nsubj":
-                word = token.text.lower()
-                for variation, character in self.variation_2_character.items():
-                    if variation.lower() == word:
-                        return character
-
-    def find_previous_char(self, max_lookback=3):
-=======
     def find_previous_character(self, max_lookback=3):
->>>>>>> Stashed changes
         candidates = []
         for sentence in reversed(self.past_sentences[-max_lookback:]):
             chars_in_sentence = self.find_characters(sentence)
@@ -115,16 +93,6 @@ class CharacterRelations:
         relations = []
         
         if self.is_dialog:
-<<<<<<< Updated upstream
-            # diyalog durumunda:
-            # 1) önceki karakter varsa, diyalog içindeki tüm karakterlerle ilişki kur
-            # 2. diyalog içindeki karakterler kendi aralarında da ilişki kurabilir
-            relationships = relationships = self.build_dialog_relationships(characters, relationships, sentiment, previous_character=None)
-        
-        else:
-            # diyalog değilse, karakterler arasında normal ilişki kur
-            relationships = relationships = self.build_narrative_relationships(characters, relationships, sentiment, previous_character=None)
-=======
             # In dialog:
             # 1. If previous character exists, relate with all characters in dialog
             if previous_character:
@@ -150,7 +118,6 @@ class CharacterRelations:
             # If single character and previous character exists, relate them
             elif len(characters) == 1 and previous_character and characters[0] != previous_character:
                 relations.append({"from": previous_character, "to": characters[0], "emotion": emotion})
->>>>>>> Stashed changes
         
         return relations
 
