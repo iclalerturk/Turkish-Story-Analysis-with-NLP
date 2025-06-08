@@ -1,2 +1,5 @@
-aziz petrus,petrus
-lustig,lustigin
+meyve ağacı,meyve ağacı'nın
+arkadaşları,arkadaşların,arkadaşlarım
+annesi,annen
+elif
+ayşe

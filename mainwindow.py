@@ -587,13 +587,10 @@ class Ui_MainWindow(object):
         def analiz_et(self):
                 hikaye_yolu = self.hikayeYoluLine.text()
                 if hikaye_yolu:
-                        # Burada hikaye analizi yapılacak
                         print(f"Hikaye analizi yapılıyor: {hikaye_yolu}")
-                        # kisiler yuklenecek gcis sayılarıyla
                         self.stackedWidget.setCurrentIndex(1)
                         analiz = MetinAnaliz(hikaye_yolu)
                         sirali_gruplar = analiz.tum_islemler()
-                        # sirali_gruplar: [('Karakter1', 5), ('Karakter2', 3), ...]
                         model = QtGui.QStandardItemModel()
                         for karakter, gecis_sayisi in sirali_gruplar:
                                 item = QtGui.QStandardItem(f"-> {karakter} ({gecis_sayisi} kez geçiş)")
@@ -612,7 +609,6 @@ class Ui_MainWindow(object):
         def giris_iliski(self):
                 pixmap = self.iliski.section_based_graph("Giriş Bölümü")
                 scene = QGraphicsScene()
-                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
                 scaled_pixmap = pixmap.scaled(
                     view_size,
@@ -625,7 +621,6 @@ class Ui_MainWindow(object):
         def gelisme_iliski(self):
                 pixmap = self.iliski.section_based_graph("Gelişme Bölümü")
                 scene = QGraphicsScene()
-                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
                 scaled_pixmap = pixmap.scaled(
                     view_size,
@@ -638,7 +633,6 @@ class Ui_MainWindow(object):
         def sonuc_iliski(self):
                 pixmap = self.iliski.section_based_graph("Sonuç Bölümü")
                 scene = QGraphicsScene()
-                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
                 scaled_pixmap = pixmap.scaled(
                     view_size,
@@ -650,10 +644,8 @@ class Ui_MainWindow(object):
                 self.IliskiGraphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
         def duygu_degisim_grafigi_goster(self):
-                # Duygu değişimi grafiğini göster
                 pixmap = self.iliski.draw_emotion_curve()
                 scene = QGraphicsScene()
-                # Grafik alanına sığdırmak için
                 view_size = self.IliskiGraphicsView.size()
                 scaled_pixmap = pixmap.scaled(
                     view_size,
@@ -667,7 +659,6 @@ class Ui_MainWindow(object):
         def genel_iliski(self):
                 pixmap = self.iliski.overall_relation_graph()
                 scene = QGraphicsScene()
-                # Grafik alanına sığdırmak için pixmap'i yeniden boyutlandır
                 view_size = self.IliskiGraphicsView.size()
                 scaled_pixmap = pixmap.scaled(
                     view_size,

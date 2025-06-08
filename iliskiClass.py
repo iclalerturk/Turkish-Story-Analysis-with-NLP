@@ -10,14 +10,12 @@ import io
 
 class CharacterRelations:
     def __init__(self, story_path, character_path="karakterler.txt"):
-        # 🔧 NLP and model setup
         self.model_name = "savasy/bert-base-turkish-sentiment-cased"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
         self.classifier = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer)
         self.nlp = spacy.load("tr_core_news_trf")
         
-        # 📄 Load text and character variations
         self.story_path = story_path
         self.character_path = character_path
         self.variation_to_character = {}
@@ -26,7 +24,6 @@ class CharacterRelations:
         self.all_relations = []
         self.past_sentences = []
         self.pattern = re.compile(r'“[^“”]+”|"[^"]+"|[^“”".]+[.]')
-        # Emotion colors
         self.emotion_colors = {"positive": "green", "negative": "red", "neutral": "gray"}
         self.is_dialog = False
 
@@ -94,13 +91,13 @@ class CharacterRelations:
         
         if self.is_dialog:
             # In dialog:
-            # 1. If previous character exists, relate with all characters in dialog
+            # If previous character exists, relate with all characters in dialog
             if previous_character:
                 for target in characters:
                     if target != previous_character:
                         relations.append({"from": previous_character, "to": target, "emotion": emotion})
             
-            # 2. Characters in dialog can also relate among themselves
+            #Characters in dialog can also relate among themselves
             if len(characters) >= 2:
                 for i in range(len(characters)):
                     for j in range(i + 1, len(characters)):
@@ -108,14 +105,14 @@ class CharacterRelations:
                             relations.append({"from": characters[i], "to": characters[j], "emotion": emotion})
         
         else:
-            # Not dialog, normal relation
+            #Not dialog, normal relation
             if len(characters) >= 2:
                 for i in range(len(characters)):
                     for j in range(i + 1, len(characters)):
                         if characters[i] != characters[j]:
                             relations.append({"from": characters[i], "to": characters[j], "emotion": emotion})
             
-            # If single character and previous character exists, relate them
+            #If single character and previous character exists, relate them
             elif len(characters) == 1 and previous_character and characters[0] != previous_character:
                 relations.append({"from": previous_character, "to": characters[0], "emotion": emotion})
         
@@ -160,7 +157,6 @@ class CharacterRelations:
 
             previous = self.find_previous_character()
 
-            # 💡 Yeni kural burada:
             if len(present_characters) == 1 and not self.is_dialog:
                 if not previous or present_characters[0] == previous:
                     self.past_sentences.append(sentence)
@@ -177,8 +173,7 @@ class CharacterRelations:
             self.past_sentences.append(sentence)
 
             
-    def draw_emotion_curve(self) -> QPixmap:
-        # 📈 Draw emotion curve
+    def draw_emotion_curve(self) -> QPixmap:#Giriş gelişme sonuç bölümlerini ayırma ve grafiğini çizme
         emotion_scores = []
         label_to_score = {"positive": 1, "neutral": 0, "negative": -1}
         for relation in self.all_relations:
@@ -186,34 +181,27 @@ class CharacterRelations:
             score = label_to_score.get(emotion, 0)
             emotion_scores.append(score)
 
-        # Smooth with moving average
         smooth_emotion_flow = self.moving_average(emotion_scores, window_size=5)
 
-        # Calculate emotion change intensity
         change_scores = [abs(smooth_emotion_flow[i] - smooth_emotion_flow[i - 1]) for i in range(1, len(smooth_emotion_flow))]
         if len(change_scores) < 2:
             raise ValueError("Not enough emotion data.")
 
-        # Find two biggest break points with minimum distance constraint
         scores_copy = change_scores.copy()
         first_break = scores_copy.index(max(scores_copy)) + 1
-        scores_copy[first_break - 1] = -1  # Mark first break as used
+        scores_copy[first_break - 1] = -1  
 
-        # Minimum mesafe (örnek: toplam uzunluğun %10'u)
         min_distance = int(len(change_scores) * 0.15)
 
-        # İkinci kırılma noktası için uygun adayları filtrele
         second_break_candidates = [(i, val) for i, val in enumerate(scores_copy) if abs(i + 1 - first_break) >= min_distance]
 
         if second_break_candidates:
             second_break = max(second_break_candidates, key=lambda x: x[1])[0] + 1
         else:
-            # Eğer uygun aday yoksa, en büyük değeri seç (yine de çok yakın olabilir)
             second_break = scores_copy.index(max(scores_copy)) + 1
 
         break_points = sorted([first_break, second_break])
 
-        # Plotting
         fig = plt.figure(figsize=(10, 4))
         plt.plot(smooth_emotion_flow, color='purple', linewidth=2)
         plt.axvline(x=break_points[0], color='gray', linestyle='--', label="Section Break")
@@ -225,7 +213,6 @@ class CharacterRelations:
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
 
-        # Draw to memory
         canvas = FigureCanvasAgg(fig)
         buf = io.BytesIO()
         canvas.print_png(buf)

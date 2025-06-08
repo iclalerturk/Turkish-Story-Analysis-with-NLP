@@ -39,13 +39,6 @@ class MetinAnaliz:
         self.sentences_by_character = defaultdict(list)
         self.groups = []
 
-    # def clean_text(self, metin):
-    #     metin = metin.lower()
-    #     metin = metin.translate(str.maketrans('', '', string.punctuation.replace("'", "")))
-    #     metin = re.sub(r'\d+', '', metin)
-    #     kelimeler = word_tokenize(metin, language='turkish')
-    #     kelimeler = [kelime.split("'")[0] for kelime in kelimeler]
-    #     return ' '.join(kelimeler)
 
     def text_preprocess(self,text):
         text = text.replace("’", "'")  # ’ işaretini ' dönüştür
@@ -72,9 +65,6 @@ class MetinAnaliz:
 
         if len(modifiers) >= 1:
             modifiers = sorted(modifiers, key=lambda x: x.i)
-            # last_word = modifiers[-1].text.lower()
-            # oncekiler = [t.text.lower() for t in modifiers[:-1]]
-            # return " ".join(oncekiler + [last_word])
             return " ".join([t.text.lower() for t in modifiers])
         else:
             return None
@@ -179,9 +169,6 @@ class MetinAnaliz:
                 visited_groups.add(j)
 
 
-
-
-
     def merge_similar_names_by_threshold(self, group1_index, character1, copy, visited_groups, character_count, merged_group, all_similars, threshold):
         for j in range(group1_index + 1, len(copy)):
             if j in visited_groups:
@@ -231,9 +218,6 @@ class MetinAnaliz:
             })
 
         return new_groups
-
-
-
     
     def _extract_ner_characters(self, doc):
         for ent in doc.ents:
@@ -292,35 +276,6 @@ class MetinAnaliz:
         doc = self.nlp(sentence)
 
 
-        # # Spacy NER (kişiler)
-        # for ent in doc.ents:
-        #     temiz_karakter = self.clean_word(ent.text)
-        #     # print("1", temiz_karakter)
-        #     if ent.label_ == "PERSON" and temiz_karakter not in self.characters and len(ent.text) > 1:
-        #         # print("2",temiz_karakter)
-        #         if temiz_karakter not in self.turkce_stopwords:
-        #             print("3",temiz_karakter)
-        #             self.characters.add(temiz_karakter)
-
-        # # Fiil özneleri ve birleşik isimler
-        # for token in doc:
-        #     if token.dep_ in ["nsubj", "nsubjpass"] and token.pos_ in ["NOUN", "PROPN", "ADJ"]:
-        #         birlesik = self.get_modifier_chain(token)
-        #         if birlesik:
-        #             if token.head.pos_ == "VERB" and token.head.lemma_ in self.insansi_eylemler and all(kelime not in self.turkce_stopwords for kelime in birlesik.split()):
-        #                 self.characters.add(birlesik)
-        #                 # print("!!!!!!!!!!!!!!!!!!!!!!", birlesik, token.text)
-        #                 # print("Cümle:", token.sent.text.strip())  # ← burada cümle yazdırılır
-        #         # Doğrudan token'ı alıyoruz
-        #         else:
-        #             # Doğrudan token'ı alıyoruz
-        #             temiz_karakter = self.clean_word(token.lemma_)
-        #             # print("----------", temiz_karakter)
-        #             if token.head.pos_ == "VERB" and token.head.lemma_ in self.insansi_eylemler and temiz_karakter not in self.characters:
-        #                 if temiz_karakter not in self.turkce_stopwords and len(temiz_karakter) > 1:
-        #                     self.characters.add(temiz_karakter)
-        #                     # print("++++++", temiz_karakter, token.lemma_, token.head.lemma_)
-
         self._extract_ner_characters(doc)
         self._extract_subject_characters(doc)
 
@@ -338,43 +293,7 @@ class MetinAnaliz:
         for i, group in enumerate(groups, 1):
             print(f"Grup {i}: {group}")
 
-        # duzenlenmis_metin = sentence
         sentences = list(doc.sents)
-
-        # for grup in gruplar:
-        #     ana_karakter = grup["karakter"]
-            
-        #     # Tüm alternatif ifadeleri topla
-        #     alternatifler = set()
-        #     for alt_grup in grup["gruplar"]:
-        #         alternatifler.update(alt_grup)
-            
-        #     # En uzun eşleşmeler öncelikli
-        #     alternatifler = sorted(alternatifler, key=lambda x: -len(x))
-        #     patternler = [r'\b' + re.escape(ifade) + r'([a-zçğıöşü]{0,6})?\b' for ifade in alternatifler]
-
-        #     for sent in cümleler:
-        #         sent_text = sent.text
-        #         sent_lower = sent_text.lower()
-
-        #         # Aday karakter bul
-        #         adaylar = []
-        #         for token in sent:
-        #             if token.pos_ in ["NOUN", "PROPN", "ADJ"]:
-        #                 aday_raw = self.get_modifier_chain(token) or token.text
-        #                 temiz_aday = self.clean_word(aday_raw)
-        #                 adaylar.append(temiz_aday)
-
-        #         eşleşti_mi = False
-        #         for pattern in patternler:
-        #             for aday in adaylar:
-        #                 if re.search(pattern, aday):
-        #                     self.sentences_by_character[ana_karakter].append(sent_text.strip())
-        #                     self.character_counter[ana_karakter] += len(re.findall(pattern, sent_lower))
-        #                     eşleşti_mi = True
-        #                     break
-        #             if eşleşti_mi:
-        #                 break
 
         for group in groups:
             self._assign_sentences_to_groups(doc, group, sentences)
