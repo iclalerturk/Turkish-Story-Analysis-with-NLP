@@ -9,7 +9,6 @@ class Ui_MainWindow(object):
                 self.iliski = CharacterRelations(story_path=None)
                 MainWindow.setObjectName("MainWindow")
                 MainWindow.resize(1200, 750)
-                MainWindow.setWindowTitle("Karakter ve İlişki Analizi")
                 palette = QtGui.QPalette()
                 brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
                 brush.setStyle(QtCore.Qt.SolidPattern)

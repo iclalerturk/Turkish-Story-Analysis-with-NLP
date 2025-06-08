@@ -10,6 +10,7 @@ if __name__ == "__main__":
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
+    MainWindow.setWindowTitle("Karakter ve İlişki Analizi")
     ui.hikayeSecButton.clicked.connect(ui.hikaye_sec)
     ui.analizEtButton.clicked.connect(ui.analiz_et)
     ui.girisButton.clicked.connect(ui.giris_iliski)
