@@ -128,8 +128,14 @@ class CharacterRelations:
         for i, (sentence, self.is_dialog) in enumerate(self.segments):
             doc = self.nlp(sentence)
             present_characters = self.find_characters(sentence)
+
             if not present_characters and self.contains_pronoun(doc):
                 previous = self.find_previous_character()
+
+                if previous is None:
+                    self.past_sentences.append(sentence)
+                    continue
+
                 estimated_characters = []
                 if self.is_dialog:
                     next_character = None
@@ -147,18 +153,29 @@ class CharacterRelations:
                     if previous:
                         estimated_characters.append(previous)
                 present_characters = estimated_characters
+
             if not present_characters:
                 self.past_sentences.append(sentence)
                 continue
+
+            previous = self.find_previous_character()
+
+            # 💡 Yeni kural burada:
+            if len(present_characters) == 1 and not self.is_dialog:
+                if not previous or present_characters[0] == previous:
+                    self.past_sentences.append(sentence)
+                    continue
+
             try:
                 emotion = self.classifier(sentence)[0]["label"]
             except:
                 self.past_sentences.append(sentence)
                 continue
-            previous = self.find_previous_character()
+
             relations = self.establish_emotional_relation(sentence, present_characters, emotion, previous)
             self.all_relations.extend(relations)
             self.past_sentences.append(sentence)
+
             
     def draw_emotion_curve(self) -> QPixmap:
         # 📈 Draw emotion curve
