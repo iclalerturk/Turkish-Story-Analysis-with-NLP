@@ -114,7 +114,7 @@ class MetinAnaliz:
             subgroups = self.create_groups(phrase_list)
 
             for group in subgroups:
-                character = min([x for x in group if len(x.split()) == max(len(y.split()) for y in group)], key=lambda x: len(x))  #kelime sayısı en fazla olanlar arasından en kısası
+                character = min([x for x in group if len(x.split()) == max(len(y.split()) for y in group)], key=lambda x: len(x)) 
                 groups.append({
                     "cekirdek": head_lemma,
                     "karakter": character,
