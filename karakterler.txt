@@ -1,6 +1,4 @@
-balıkçı,balıkçının
-zeynep
-mehmet
-ahmet
-ayşe
-cin
+cüceler,cücelerin
+cam tabut içindeki prenses,prensesin,prenses,pamuk prenses
+iyi kalpli kraliçe,kraliçe
+avcı

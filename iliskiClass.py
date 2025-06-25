@@ -47,7 +47,6 @@ class CharacterRelations:
             self.is_dialog = (sentence.startswith("“") and sentence.endswith("”")) or (sentence.startswith('"') and sentence.endswith('"'))
             self.segments.append((sentence.strip("“”\""), self.is_dialog))
 
-    # 🔍 Helper functions
     def find_characters(self, sentence):
         sentence = sentence.lower()
         found = set()
