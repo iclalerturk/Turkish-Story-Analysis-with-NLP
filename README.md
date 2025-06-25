@@ -1,7 +1,3 @@
-# araproje
-
-
-````markdown
 # Story Analysis Tool
 
 This Python-based application performs emotion and character analysis on stories written in Turkish. It provides visual insights into character interactions and emotional progressions throughout the story.
@@ -10,14 +6,14 @@ This Python-based application performs emotion and character analysis on stories
 
 Before running the application, make sure to install the required Python libraries listed in the `requirements.txt` file:
 
+```bash
+pip install -r requirements.txt
+```
+
 ## Python Version
 
 This project is developed and tested with **Python 3.10.11**.  
 It is recommended to use this version for compatibility and stability.
-
-```bash
-pip install -r requirements.txt
-````
 
 ## 📝 How to Use
 
@@ -30,7 +26,7 @@ pip install -r requirements.txt
 
 2. **Prepare Your Story File**
 
-   * Download story files from the provided Google Drive link
+   * Download story files from the provided Google Drive link: https://drive.google.com/drive/folders/12bdvr3F62clm9pFcGEF-y-JhfUDWHTvP?usp=sharing 
      **or**
    * Save your own story as a `.txt` file on your computer.
 
