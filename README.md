@@ -40,7 +40,7 @@ It is recommended to use this version for compatibility and stability.
    When prompted, select a `.txt` file from your computer to analyze.
 
 6. **Start the Analysis**
-   Click the **"Analyze"** button to begin. After processing, character and emotion graphs will be displayed on the interface.
+   Click the **"Analiz Et"** button to begin. After processing, character and emotion graphs will be displayed on the interface.
 
 7. **Explore the Results**
    Use the available buttons in the interface to view:
@@ -54,5 +54,9 @@ It is recommended to use this version for compatibility and stability.
 
 * Make sure your `.txt` file is encoded in UTF-8 and written in Turkish for accurate analysis.
 * Internet connection may be required for downloading models or NLP resources during the first run.
+
+## User Interface Preview
+![image](https://github.com/user-attachments/assets/f2010a98-4079-465d-a07c-32f994b041fa)
+
 
 
